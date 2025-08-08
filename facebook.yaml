@@ -1,0 +1,4249 @@
+openapi: 3.1.0
+info:
+  title: Meta Marketing API – Full Surface OpenAPI
+  summary: Full-surface OpenAPI for Meta (Facebook) Marketing API.
+  version: v23.0
+  description: >-
+    Comprehensive OpenAPI 3.1 spec covering Meta (Facebook) Marketing API
+    v23.0, including ad accounts, campaigns, ad sets, ads, creatives,
+    insights, audiences, pixels, catalogs, offline events, pages, business
+    assets, async jobs, batch operations, and webhooks.
+
+
+    ## Authentication
+
+    Use `Authorization: Bearer {access-token}` with a valid User, Page, or
+    System User token. Common scopes: `ads_management`, `ads_read`,
+    `business_management`, `pages_read_engagement`,
+    `pages_manage_metadata`, `leads_retrieval`, `catalog_management`,
+    `read_insights`, `pages_show_list`. App review may be required for
+    certain permissions.
+
+
+    ## Graph API Conventions
+
+    - Nodes are objects (e.g., AdAccount, Campaign).
+
+    - Edges are connections (e.g., `/act_{id}/campaigns`).
+
+    - Field selection via `fields` query param; supports nested expansions.
+
+    - Cursor pagination via `limit`, `after`, `before`.
+
+
+    ## Rate Limiting
+
+    Requests are subject to Meta platform rate limiting (Business and
+    App-level). Back off on HTTP 429 and observe `X-App-Usage`,
+    `X-Page-Usage`, and `X-Business-Use-Case-Usage` headers when present.
+
+
+    ## Data Protection
+
+    When creating Custom Audiences with customer data, hash PII (SHA-256)
+    client-side where required and ensure GDPR/CCPA compliance.
+
+
+    ## Errors
+
+    Errors return: `{ error: { message, type, code, error_subcode,
+    error_user_title, error_user_msg, fbtrace_id } }`.
+
+
+    ## Batch & Async
+
+    The Graph Batch API (`POST /?batch=...`) enables multiple operations in a
+    single request. Async jobs are provided for large reports (Insights) and
+    bulk uploads.
+  termsOfService: https://www.facebook.com/legal/terms
+  contact:
+    name: API Team
+    url: https://developers.facebook.com/docs/marketing-apis/
+  license:
+    name: Meta Platform Terms
+servers:
+  - url: https://graph.facebook.com/v23.0
+    description: Production server pinned to version v23.0.
+  - url: https://graph.facebook.com
+    description: Versionless server (include version in path, e.g., /v23.0/...).
+externalDocs:
+  description: Meta Marketing API Documentation
+  url: https://developers.facebook.com/docs/marketing-apis/
+security:
+  - OAuth2Bearer: []
+tags:
+  - name: Accounts
+    description: >-
+      Identity & account resources including /me, Users, Ad Accounts,
+      Businesses, and Pages.
+  - name: Campaigns
+    description: Campaign objects and edges on ad accounts.
+  - name: Ad Sets
+    description: Ad set objects and related edges.
+  - name: Ads
+    description: Ad objects and management.
+  - name: Creatives
+    description: Ad creative management including images, videos, and mockups.
+  - name: Insights
+    description: >-
+      Insights and async reporting across account, campaign, ad set, and ad
+      levels.
+  - name: Audiences
+    description: Custom Audiences, Lookalike specs, and targeting search.
+  - name: Pixels
+    description: Pixels, events, and conversions.
+  - name: Conversions
+    description: Conversions API (CAPI) and custom conversions.
+  - name: Catalogs
+    description: Commerce catalogs, products, feeds, and uploads.
+  - name: Offline Events
+    description: Offline event sets and uploads.
+  - name: Lead Ads
+    description: Leadgen forms, leads, and related webhooks.
+  - name: Business
+    description: >-
+      Business assets, system users, partners, apps/permissions, and shared
+      assets.
+  - name: Media
+    description: Media endpoints for ad images and video upload flows.
+  - name: Diagnostics
+    description: Delivery estimates, targeting validation, reach/frequency tooling.
+  - name: Batch
+    description: Graph API batch operations.
+  - name: Utilities
+    description: Utilities including search and fields expansion.
+  - name: Webhooks
+    description: Webhooks event formats and subscription payloads.
+paths:
+  /:
+    post:
+      tags:
+        - Batch
+      summary: Graph API Batch request
+      description: >-
+        Executes multiple Graph API calls in a single HTTP request using the
+        batch parameter.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: batch
+          in: query
+          required: true
+          description: JSON array of individual Graph API requests.
+          schema:
+            type: string
+          example: >-
+            [{"method":"GET","relative_url":"me"},{"method":"POST","relative_url":"me/feed","body":"message=Hello"}]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchRequest'
+      responses:
+        '200':
+          description: Batch response array
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchResponse'
+              example:
+                - code: 200
+                  headers: []
+                  body:
+                    id: '123'
+                    name: Test Campaign
+                - code: 400
+                  headers: []
+                  body:
+                    error:
+                      message: Invalid parameter
+                      type: OAuthException
+                      code: 100
+                      fbtrace_id: EJplcsCHuLu
+  /me:
+    get:
+      tags:
+        - Accounts
+      summary: Get current user profile
+      description: >-
+        Returns the profile of the current user associated with the access
+        token.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: Successful response with user profile data.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                id: '100012345678901'
+                name: John Doe
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /me/adaccounts:
+    get:
+      tags:
+        - Accounts
+      summary: List ad accounts for the current user
+      description: Returns the list of ad accounts the user has access to.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/fields'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/after'
+        - $ref: '#/components/parameters/before'
+      responses:
+        '200':
+          description: List of ad accounts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaging'
+              example:
+                data:
+                  - id: act_123456789012345
+                    account_id: '123456789012345'
+                    name: Main Account
+                paging:
+                  cursors:
+                    before: QVFIUmF3...
+                    after: QVFIUkhV...
+  '/{business_id}/owned_ad_accounts':
+    get:
+      tags:
+        - Accounts
+      summary: List ad accounts owned by business
+      description: Returns ad accounts owned by the given business.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: business_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/BusinessId'
+        - $ref: '#/components/parameters/fields'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: List of owned ad accounts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaging'
+  '/{business_id}/system_users':
+    get:
+      tags:
+        - Accounts
+        - Business
+      summary: List system users for a business
+      description: Returns system users associated with the given business.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: business_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/BusinessId'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: List of system users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaging'
+    post:
+      tags:
+        - Business
+      summary: Create system user
+      description: Creates a new system user for the specified business.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: business_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/BusinessId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                role:
+                  type: string
+              required:
+                - name
+                - role
+            example:
+              name: Marketing API User
+              role: ADMIN
+      responses:
+        '200':
+          description: Created system user ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+              example:
+                id: '543210987654321'
+  '/{page_id}/leadgen_forms':
+    get:
+      tags:
+        - Lead Ads
+      summary: List leadgen forms for a Page
+      description: Returns lead generation forms for a given Page.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: page_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/PageId'
+        - $ref: '#/components/parameters/fields'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: List of leadgen forms
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaging'
+    post:
+      tags:
+        - Lead Ads
+      summary: Create leadgen form
+      description: Creates a new lead generation form for the specified page.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: page_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/PageId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                follow_up_action_url:
+                  type: string
+                questions:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+              required:
+                - name
+                - questions
+            example:
+              name: Home Buyer Lead Form
+              follow_up_action_url: 'https://example.com/thank-you'
+              questions:
+                - type: FULL_NAME
+                - type: EMAIL
+                - type: PHONE
+      responses:
+        '200':
+          description: Created form ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+              example:
+                id: '987654321001234'
+  '/{ad_account_id}/campaigns':
+    get:
+      tags:
+        - Campaigns
+      summary: List campaigns
+      description: Returns all campaigns in the specified ad account.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+        - $ref: '#/components/parameters/fields'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/after'
+        - $ref: '#/components/parameters/before'
+        - $ref: '#/components/parameters/effective_status'
+      responses:
+        '200':
+          description: List of campaigns
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaging'
+    post:
+      tags:
+        - Campaigns
+      summary: Create campaign
+      description: Creates a new campaign under the specified ad account.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                objective:
+                  $ref: '#/components/schemas/Objective'
+                status:
+                  $ref: '#/components/schemas/DeliveryStatus'
+                special_ad_categories:
+                  type: array
+                  items:
+                    type: string
+                daily_budget:
+                  type: string
+                lifetime_budget:
+                  type: string
+                start_time:
+                  type: string
+                  format: date-time
+                stop_time:
+                  type: string
+                  format: date-time
+                bid_strategy:
+                  $ref: '#/components/schemas/Bid/properties/bid_strategy'
+              required:
+                - name
+                - objective
+                - status
+            example:
+              name: Q4 Awareness
+              objective: OUTCOME_AWARENESS
+              status: PAUSED
+              daily_budget: '5000'
+      responses:
+        '200':
+          description: Created campaign ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+              example:
+                id: '120000000000001'
+  '/{campaign_id}/insights':
+    get:
+      tags:
+        - Insights
+      summary: Get campaign insights
+      description: Returns insights for the specified campaign.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: campaign_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/CampaignId'
+        - $ref: '#/components/parameters/fields'
+        - $ref: '#/components/parameters/time_range'
+        - $ref: '#/components/parameters/date_preset'
+        - $ref: '#/components/parameters/level'
+        - $ref: '#/components/parameters/breakdowns'
+        - $ref: '#/components/parameters/time_increment'
+        - $ref: '#/components/parameters/filtering'
+      responses:
+        '200':
+          description: Insights data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdInsight'
+  '/{ad_account_id}/adsets':
+    get:
+      tags:
+        - Ad Sets
+      summary: List ad sets
+      description: Returns all ad sets in the specified ad account.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+        - $ref: '#/components/parameters/fields'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/after'
+        - $ref: '#/components/parameters/before'
+        - $ref: '#/components/parameters/effective_status'
+      responses:
+        '200':
+          description: List of ad sets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaging'
+    post:
+      tags:
+        - Ad Sets
+      summary: Create ad set
+      description: Creates a new ad set in the specified ad account.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                campaign_id:
+                  $ref: '#/components/schemas/CampaignId'
+                status:
+                  $ref: '#/components/schemas/DeliveryStatus'
+                daily_budget:
+                  type: string
+                lifetime_budget:
+                  type: string
+                start_time:
+                  type: string
+                  format: date-time
+                end_time:
+                  type: string
+                  format: date-time
+                billing_event:
+                  $ref: '#/components/schemas/BillingEvent'
+                optimization_goal:
+                  $ref: '#/components/schemas/OptimizationGoal'
+                bid_amount:
+                  type: string
+                bid_strategy:
+                  $ref: '#/components/schemas/Bid/properties/bid_strategy'
+                attribution_setting:
+                  $ref: '#/components/schemas/AttributionSetting'
+                targeting:
+                  $ref: '#/components/schemas/Targeting'
+              required:
+                - name
+                - campaign_id
+                - status
+                - optimization_goal
+                - billing_event
+                - targeting
+            example:
+              name: Prospecting US 25-55
+              campaign_id: '120000000000001'
+              status: PAUSED
+              daily_budget: '5000'
+              billing_event: IMPRESSIONS
+              optimization_goal: REACH
+              targeting:
+                age_min: 25
+                age_max: 55
+                geo_locations:
+                  countries:
+                    - US
+                publisher_platforms:
+                  - facebook
+                  - instagram
+                device_platforms:
+                  - mobile
+                  - desktop
+      responses:
+        '200':
+          description: Created ad set ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+              example:
+                id: '120000000000101'
+  '/{adset_id}/insights':
+    get:
+      tags:
+        - Insights
+      summary: Get ad set insights
+      description: Returns insights for the specified ad set.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: adset_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdSetId'
+        - $ref: '#/components/parameters/fields'
+        - $ref: '#/components/parameters/time_range'
+        - $ref: '#/components/parameters/date_preset'
+        - $ref: '#/components/parameters/level'
+        - $ref: '#/components/parameters/breakdowns'
+        - $ref: '#/components/parameters/time_increment'
+        - $ref: '#/components/parameters/filtering'
+      responses:
+        '200':
+          description: Insights data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdInsight'
+  '/{ad_account_id}/ads':
+    get:
+      tags:
+        - Ads
+      summary: List ads
+      description: Returns all ads in the specified ad account.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+        - $ref: '#/components/parameters/fields'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/after'
+        - $ref: '#/components/parameters/before'
+        - $ref: '#/components/parameters/effective_status'
+      responses:
+        '200':
+          description: List of ads
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaging'
+    post:
+      tags:
+        - Ads
+      summary: Create ad
+      description: Creates a new ad under the specified ad account.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                adset_id:
+                  $ref: '#/components/schemas/AdSetId'
+                creative:
+                  type: object
+                  properties:
+                    creative_id:
+                      $ref: '#/components/schemas/AdCreativeId'
+                  required:
+                    - creative_id
+                status:
+                  $ref: '#/components/schemas/DeliveryStatus'
+              required:
+                - name
+                - adset_id
+                - creative
+                - status
+            example:
+              name: Image Ad A
+              adset_id: '120000000000101'
+              creative:
+                creative_id: '120000000000301'
+              status: PAUSED
+      responses:
+        '200':
+          description: Created ad ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+              example:
+                id: '120000000000201'
+  '/{ad_id}/insights':
+    get:
+      tags:
+        - Insights
+      summary: Get ad insights
+      description: Returns insights for the specified ad.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdId'
+        - $ref: '#/components/parameters/fields'
+        - $ref: '#/components/parameters/time_range'
+        - $ref: '#/components/parameters/date_preset'
+        - $ref: '#/components/parameters/level'
+        - $ref: '#/components/parameters/breakdowns'
+        - $ref: '#/components/parameters/time_increment'
+        - $ref: '#/components/parameters/filtering'
+      responses:
+        '200':
+          description: Insights data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdInsight'
+  '/{ad_account_id}/adcreatives':
+    get:
+      tags:
+        - Creatives
+      summary: List ad creatives
+      description: Returns all ad creatives in the specified ad account.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+        - $ref: '#/components/parameters/fields'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/after'
+        - $ref: '#/components/parameters/before'
+      responses:
+        '200':
+          description: List of ad creatives
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaging'
+    post:
+      tags:
+        - Creatives
+      summary: Create ad creative
+      description: Creates a new ad creative in the specified ad account.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                object_story_spec:
+                  $ref: '#/components/schemas/ObjectStorySpec'
+                asset_feed_spec:
+                  type: object
+                template_url:
+                  type: string
+                url_tags:
+                  type: string
+              required:
+                - name
+                - object_story_spec
+            example:
+              name: Link Post Creative
+              object_story_spec:
+                page_id: '112233445566778'
+                link_data:
+                  message: Check out our offer
+                  link: 'https://www.example.com'
+                  image_hash: abc123...
+      responses:
+        '200':
+          description: Created ad creative ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+              example:
+                id: '120000000000301'
+  '/{ad_account_id}/adimages':
+    post:
+      tags:
+        - Media
+      summary: Upload ad image
+      description: Uploads an image for use in ad creatives.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                filename:
+                  type: string
+                  format: binary
+              required:
+                - filename
+      responses:
+        '200':
+          description: Uploaded image hash
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  images:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        hash:
+                          type: string
+              example:
+                images:
+                  product.jpg:
+                    hash: 3c5e1a2b6f9d0e...
+  '/{ad_account_id}/advideos':
+    post:
+      tags:
+        - Media
+      summary: Upload video (start/finish)
+      description: >-
+        Initiates an upload session for a video (upload_phase: start) or
+        completes it (upload_phase: finish).
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  properties:
+                    upload_phase:
+                      type: string
+                      enum:
+                        - start
+                    file_size:
+                      type: integer
+                      description: Size in bytes
+                  required:
+                    - upload_phase
+                    - file_size
+                  example:
+                    upload_phase: start
+                    file_size: 1048576
+                - type: object
+                  properties:
+                    upload_phase:
+                      type: string
+                      enum:
+                        - finish
+                    upload_session_id:
+                      type: string
+                  required:
+                    - upload_phase
+                    - upload_session_id
+                  example:
+                    upload_phase: finish
+                    upload_session_id: '1234567890'
+      responses:
+        '200':
+          description: >-
+            Response for start or finish phase. See examples for details on
+            each.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      upload_session_id:
+                        type: string
+                      video_id:
+                        type: string
+                      start_offset:
+                        type: string
+                      end_offset:
+                        type: string
+                      upload_url:
+                        type: string
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                      video_id:
+                        type: string
+              examples:
+                start_phase:
+                  summary: Response for start phase
+                  value:
+                    upload_session_id: '1234567890'
+                    video_id: '2345678901'
+                    start_offset: '0'
+                    end_offset: '1048576'
+                    upload_url: 'https://video-upload.facebook.com/api/...'
+                finish_phase:
+                  summary: Response for finish phase
+                  value:
+                    success: true
+                    video_id: '2345678901'
+    put:
+      tags:
+        - Media
+      summary: Transfer video upload chunk
+      description: Transfers a chunk of a video to the upload session.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                upload_phase:
+                  type: string
+                  enum:
+                    - transfer
+                start_offset:
+                  type: string
+                video_file_chunk:
+                  type: string
+                  format: binary
+              required:
+                - upload_phase
+                - start_offset
+                - video_file_chunk
+      responses:
+        '200':
+          description: Updated upload session offsets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  start_offset:
+                    type: string
+                  end_offset:
+                    type: string
+              example:
+                start_offset: '1024'
+                end_offset: '2048'
+  '/{ad_account_id}/customaudiences':
+    get:
+      tags:
+        - Audiences
+      summary: List custom audiences
+      description: Returns all custom audiences in the specified ad account.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+        - $ref: '#/components/parameters/fields'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/after'
+        - $ref: '#/components/parameters/before'
+      responses:
+        '200':
+          description: List of custom audiences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaging'
+    post:
+      tags:
+        - Audiences
+      summary: Create custom audience
+      description: Creates a new custom audience in the specified ad account.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                subtype:
+                  $ref: '#/components/schemas/CustomAudienceSubtype'
+                description:
+                  type: string
+                customer_file_source:
+                  $ref: '#/components/schemas/DataSourceType'
+                payload:
+                  type: object
+                  description: Customer data payload (hashed where required)
+              required:
+                - name
+                - subtype
+            example:
+              name: CRM Customers
+              subtype: CUSTOM
+              customer_file_source: FILE_IMPORTED
+              payload:
+                schema:
+                  - EMAIL
+                  - PHONE
+                data:
+                  - - test@example.com
+                    - '1234567890'
+      responses:
+        '200':
+          description: Created audience ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+              example:
+                id: '238000000000401'
+  '/{ad_account_id}/targetingsuggestions':
+    get:
+      tags:
+        - Audiences
+      summary: Targeting suggestions
+      description: >-
+        Returns targeting suggestions for the specified ad account based on
+        interest or other criteria.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+        - name: targeting_list
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated list of targeting IDs or names.
+      responses:
+        '200':
+          description: Targeting suggestions
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /search:
+    get:
+      tags:
+        - Utilities
+      summary: Targeting search
+      description: >-
+        Searches for targeting options such as interests, behaviors,
+        demographics.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - adinterest
+              - adinterestvalid
+              - adcountry
+              - adlocale
+              - adplacement
+              - adplatform
+              - adaccount
+              - page
+              - user
+              - group
+              - event
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  '/{ad_account_id}/insights':
+    get:
+      tags:
+        - Insights
+      summary: Get ad account insights
+      description: Returns insights for the specified ad account.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+        - $ref: '#/components/parameters/fields'
+        - $ref: '#/components/parameters/time_range'
+        - $ref: '#/components/parameters/date_preset'
+        - $ref: '#/components/parameters/level'
+        - $ref: '#/components/parameters/breakdowns'
+        - $ref: '#/components/parameters/time_increment'
+        - $ref: '#/components/parameters/filtering'
+      responses:
+        '200':
+          description: Insights data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdInsight'
+  '/{ad_account_id}/insights/async':
+    post:
+      tags:
+        - Insights
+      summary: Create async insights job
+      description: >-
+        Starts an asynchronous job to retrieve large insights data for the
+        specified ad account.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                time_range:
+                  $ref: '#/components/parameters/time_range/schema'
+                date_preset:
+                  $ref: '#/components/parameters/date_preset/schema'
+                level:
+                  $ref: '#/components/parameters/level/schema'
+                breakdowns:
+                  $ref: '#/components/parameters/breakdowns/schema'
+                filtering:
+                  $ref: '#/components/parameters/filtering/schema'
+              required:
+                - level
+      responses:
+        '200':
+          description: Async job ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  report_run_id:
+                    type: string
+              example:
+                report_run_id: insights_job_123
+  '/{async_job_id}/results':
+    get:
+      tags:
+        - Insights
+      summary: Get async insights job results
+      description: Retrieves results for a completed async insights job.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: async_job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Insights data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdInsight'
+  '/{ad_account_id}/pixels':
+    get:
+      tags:
+        - Pixels
+      summary: List pixels
+      description: Returns all pixels owned by the specified ad account.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: List of pixels
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaging'
+    post:
+      tags:
+        - Pixels
+      summary: Create pixel
+      description: Creates a new pixel for the specified ad account.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+              required:
+                - name
+            example:
+              name: Main Site Pixel
+      responses:
+        '200':
+          description: Created pixel ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+              example:
+                id: '123456789012345'
+  '/{pixel_id}/events':
+    post:
+      tags:
+        - Conversions
+      summary: Send CAPI events
+      description: Sends server-side conversion events to the specified pixel.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: pixel_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/PixelId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversionsEventRequest'
+      responses:
+        '200':
+          description: CAPI events accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversionsEventResponse'
+  '/{ad_account_id}/customconversions':
+    get:
+      tags:
+        - Conversions
+      summary: List custom conversions
+      description: Returns all custom conversions in the specified ad account.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: List of custom conversions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaging'
+    post:
+      tags:
+        - Conversions
+      summary: Create custom conversion
+      description: Creates a new custom conversion for the specified ad account.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomConversion'
+      responses:
+        '200':
+          description: Created custom conversion ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+              example:
+                id: '987654321234567'
+  '/{business_id}/owned_product_catalogs':
+    get:
+      tags:
+        - Catalogs
+      summary: List product catalogs for a business
+      description: Returns all product catalogs owned by the specified business.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: business_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/BusinessId'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: List of product catalogs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaging'
+  '/{catalog_id}/products':
+    get:
+      tags:
+        - Catalogs
+      summary: List products in catalog
+      description: Returns products within the specified catalog.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: catalog_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/CatalogId'
+        - $ref: '#/components/parameters/fields'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaging'
+    post:
+      tags:
+        - Catalogs
+      summary: Create product in catalog
+      description: Creates a new product in the specified catalog.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: catalog_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/CatalogId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductItem'
+      responses:
+        '200':
+          description: Created product ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+              example:
+                id: SKU-ABC-123
+  '/{catalog_id}/feeds':
+    get:
+      tags:
+        - Catalogs
+      summary: List feeds for catalog
+      description: Returns product feeds for the specified catalog.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: catalog_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/CatalogId'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: List of feeds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaging'
+    post:
+      tags:
+        - Catalogs
+      summary: Create feed for catalog
+      description: Creates a new feed in the specified catalog.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: catalog_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/CatalogId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Feed'
+      responses:
+        '200':
+          description: Created feed ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+              example:
+                id: '987654321098765'
+  '/{catalog_id}/product_feeds':
+    post:
+      tags:
+        - Catalogs
+      summary: Upload product feed file
+      description: Uploads a product feed file to the specified catalog.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: catalog_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/CatalogId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required:
+                - file
+      responses:
+        '200':
+          description: Upload session ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadSession'
+  '/{catalog_id}/diagnostics':
+    get:
+      tags:
+        - Catalogs
+      summary: Get catalog diagnostics
+      description: Returns diagnostics for the specified catalog.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: catalog_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/CatalogId'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: Diagnostics data
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  '/{business_id}/offline_conversion_datasets':
+    get:
+      tags:
+        - Offline Events
+      summary: List offline event sets
+      description: Returns all offline event sets for the specified business.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: business_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/BusinessId'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: List of offline event sets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaging'
+    post:
+      tags:
+        - Offline Events
+      summary: Create offline event set
+      description: Creates a new offline event set for the specified business.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: business_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/BusinessId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfflineEventSet'
+      responses:
+        '200':
+          description: Created offline event set ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+              example:
+                id: '123456789000001'
+  '/{dataset_id}/events':
+    post:
+      tags:
+        - Offline Events
+      summary: Upload offline events
+      description: Uploads offline events to the specified offline event set.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: dataset_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/OfflineEventSetId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+                upload_tag:
+                  type: string
+              required:
+                - data
+            example:
+              data:
+                - match_keys:
+                    email: 5d41402abc4b2a76b9719d911017c592
+                  event_name: Purchase
+                  event_time: 1723111111
+                  value: 59.99
+                  currency: USD
+              upload_tag: POS August
+      responses:
+        '200':
+          description: Upload status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  match_rate:
+                    type: number
+                  num_received:
+                    type: integer
+                  num_invalid_entries:
+                    type: integer
+                  fbtrace_id:
+                    type: string
+              example:
+                match_rate: 0.95
+                num_received: 100
+                num_invalid_entries: 0
+                fbtrace_id: A1B2c3D4E5
+  '/{dataset_id}/uploads':
+    get:
+      tags:
+        - Offline Events
+      summary: List offline event uploads
+      description: Returns uploads for the specified offline event set.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: dataset_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/OfflineEventSetId'
+      responses:
+        '200':
+          description: List of uploads
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaging'
+  '/{form_id}/leads':
+    get:
+      tags:
+        - Lead Ads
+      summary: Retrieve leads from a form
+      description: Returns the leads submitted for the specified leadgen form.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: form_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/FormId'
+        - name: start_time
+          in: query
+          description: Start of the time range (UNIX timestamp)
+          schema:
+            type: integer
+        - name: end_time
+          in: query
+          description: End of the time range (UNIX timestamp)
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: List of leads
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaging'
+  '/{ad_account_id}/delivery_estimate':
+    get:
+      tags:
+        - Diagnostics
+      summary: Get delivery estimate
+      description: >-
+        Returns reach and impressions estimates for the specified ad account
+        based on targeting spec.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+        - name: targeting_spec
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/Targeting'
+      responses:
+        '200':
+          description: Delivery estimate object
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  '/{id}':
+    get:
+      tags:
+        - Accounts
+        - Campaigns
+        - Ad Sets
+        - Ads
+        - Creatives
+        - Audiences
+        - Pixels
+        - Conversions
+        - Catalogs
+        - Offline Events
+        - Lead Ads
+        - Insights
+      summary: Get object by ID
+      description: >-
+        Retrieves a Graph API object by its ID. The returned object will be one
+        of many possible types (e.g., User, Ad Account, Campaign, Page)
+        depending on the ID provided.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: >-
+            The unique identifier for the Graph API object. This can be a User
+            ID, Ad Account ID, Campaign ID, etc.
+          schema:
+            type: string
+            example: '120000000000001'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: >-
+            Successful response with the requested object data. The structure of
+            the response will vary depending on the type of object retrieved.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/UserProfile'
+                  - $ref: '#/components/schemas/AdAccount'
+                  - $ref: '#/components/schemas/BusinessObject'
+                  - $ref: '#/components/schemas/PageObject'
+                  - $ref: '#/components/schemas/Campaign'
+                  - $ref: '#/components/schemas/AdSet'
+                  - $ref: '#/components/schemas/Ad'
+                  - $ref: '#/components/schemas/AdCreative'
+                  - $ref: '#/components/schemas/CustomAudience'
+                  - $ref: '#/components/schemas/AsyncJobStatus'
+                  - $ref: '#/components/schemas/Pixel'
+                  - $ref: '#/components/schemas/CustomConversion'
+                  - $ref: '#/components/schemas/Catalog'
+                  - $ref: '#/components/schemas/OfflineEventSet'
+                  - $ref: '#/components/schemas/LeadgenForm'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      tags:
+        - Campaigns
+        - Ad Sets
+        - Ads
+        - Creatives
+        - Audiences
+      summary: Update object by ID
+      description: >-
+        Updates an existing Graph API object by its ID. This operation is only
+        supported for certain object types like Campaigns, Ad Sets, Ads,
+        Creatives, and Custom Audiences. The required request body depends on
+        the object being updated.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the object to update.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/Campaign'
+                - $ref: '#/components/schemas/AdSet'
+                - $ref: '#/components/schemas/Ad'
+                - $ref: '#/components/schemas/AdCreative'
+                - $ref: '#/components/schemas/CustomAudience'
+      responses:
+        '200':
+          description: Success indicator
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+              example:
+                success: true
+    delete:
+      tags:
+        - Campaigns
+        - Ad Sets
+        - Ads
+        - Audiences
+      summary: Delete object by ID
+      description: >-
+        Deletes a Graph API object by its ID. This operation is only supported
+        for certain object types like Campaigns, Ad Sets, Ads, and Custom
+        Audiences.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the object to delete.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success indicator
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+              example:
+                success: true
+webhooks:
+  leadgen:
+    post:
+      summary: Leadgen webhook
+      description: >-
+        Example webhook for lead generation form submissions from Facebook Pages.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                object:
+                  type: string
+                  example: page
+                entry:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: '1234567890'
+                      time:
+                        type: integer
+                        example: 1723112200
+                      changes:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            field:
+                              type: string
+                              example: leadgen
+                            value:
+                              type: object
+                              properties:
+                                ad_id:
+                                  type: string
+                                  example: '2384759834759834'
+                                form_id:
+                                  type: string
+                                  example: '987654321001234'
+                                leadgen_id:
+                                  type: string
+                                  example: '1122334455667788'
+                                created_time:
+                                  type: integer
+                                  example: 1723112200
+                                page_id:
+                                  type: string
+                                  example: '1234567890'
+                                adgroup_id:
+                                  type: string
+                                  example: '2384759834759835'
+                                adgroup_name:
+                                  type: string
+                                  example: Ad Set Name
+                                campaign_id:
+                                  type: string
+                                  example: '2384759834759836'
+                                campaign_name:
+                                  type: string
+                                  example: Campaign Name
+      responses:
+        '200':
+          description: Acknowledge receipt
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: EVENT_RECEIVED
+components:
+  securitySchemes:
+    OAuth2Bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >-
+        Supply a Meta access token with required scopes in the Authorization
+        header: Authorization: Bearer {access-token}. Typical scopes:
+        ads_management, ads_read, business_management,
+        pages_read_engagement, pages_manage_metadata, leads_retrieval,
+        catalog_management, read_insights, pages_show_list.
+  parameters:
+    fields:
+      name: fields
+      in: query
+      description: >-
+        Comma-separated list of fields to include. Supports nested expansions
+        (e.g., fields=name,insights{impressions,spend}).
+      required: false
+      schema:
+        type: string
+      example: id,name,status,objective
+    limit:
+      name: limit
+      in: query
+      description: Maximum number of results to return (cursor pagination).
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000
+        default: 25
+      example: 50
+    after:
+      name: after
+      in: query
+      description: Cursor pointing to the end of the page of data you have.
+      required: false
+      schema:
+        type: string
+      example: QVFIUkhV...
+    before:
+      name: before
+      in: query
+      description: Cursor pointing to the start of the page of data you have.
+      required: false
+      schema:
+        type: string
+      example: QVFIUmF3...
+    time_range:
+      name: time_range
+      in: query
+      description: >-
+        Time range for certain endpoints such as Insights. Accepts an object
+        serialized as JSON (e.g.,
+        {"since":"2024-01-01","until":"2024-01-31"}) or ISO date strings
+        depending on endpoint.
+      required: false
+      schema:
+        oneOf:
+          - type: string
+          - type: object
+            properties:
+              since:
+                type: string
+                format: date
+              until:
+                type: string
+                format: date
+    date_preset:
+      name: date_preset
+      in: query
+      description: >-
+        Preset date ranges for Insights (e.g., today, last_7d, last_30d,
+        maximum).
+      required: false
+      schema:
+        type: string
+        enum:
+          - today
+          - yesterday
+          - this_month
+          - last_month
+          - this_quarter
+          - lifetime
+          - last_3d
+          - last_7d
+          - last_14d
+          - last_28d
+          - last_30d
+          - last_90d
+          - maximum
+      example: last_7d
+    level:
+      name: level
+      in: query
+      description: Insights aggregation level.
+      required: false
+      schema:
+        type: string
+        enum:
+          - account
+          - campaign
+          - adset
+          - ad
+      example: campaign
+    breakdowns:
+      name: breakdowns
+      in: query
+      description: >-
+        Comma-separated breakdown dimensions (e.g.,
+        age,gender,region,device_platform,placement).
+      required: false
+      schema:
+        type: string
+      example: age,gender,region
+    time_increment:
+      name: time_increment
+      in: query
+      description: >-
+        Time aggregation window for Insights. Use 1 for daily, 7 for weekly,
+        or a date string interval like monthly.
+      required: false
+      schema:
+        oneOf:
+          - type: string
+          - type: integer
+      example: 1
+    filtering:
+      name: filtering
+      in: query
+      description: >-
+        JSON-encoded array of filter specs for Insights (e.g.,
+        [{"field":"campaign.id","operator":"IN","value":["123"]}]).
+      required: false
+      schema:
+        type: string
+      example: >-
+        [{"field":"campaign.id","operator":"IN","value":["120000000000001","120000000000002"]}]
+    effective_status:
+      name: effective_status
+      in: query
+      description: >-
+        Filter by effective delivery status (e.g., ACTIVE, PAUSED, ARCHIVED,
+        DELETED).
+      required: false
+      schema:
+        type: array
+        items:
+          type: string
+          enum:
+            - ACTIVE
+            - PAUSED
+            - ARCHIVED
+            - DELETED
+            - IN_PROCESS
+            - WITH_ISSUES
+        uniqueItems: true
+      style: form
+      explode: true
+      example:
+        - ACTIVE
+        - PAUSED
+    status:
+      name: status
+      in: query
+      description: Filter by configured status (varies by resource).
+      required: false
+      schema:
+        type: string
+        enum:
+          - ACTIVE
+          - PAUSED
+          - ARCHIVED
+          - DELETED
+      example: ACTIVE
+  schemas:
+    AdAccountId:
+      type: string
+      description: Ad account ID in the format act_<NUM> or numeric ID.
+      examples:
+        - act_123456789012345
+        - '123456789012345'
+    CampaignId:
+      type: string
+      description: Campaign object ID.
+      example: '120000000000001'
+    AdSetId:
+      type: string
+      description: Ad Set object ID.
+      example: '120000000000101'
+    AdId:
+      type: string
+      description: Ad object ID.
+      example: '120000000000201'
+    AdCreativeId:
+      type: string
+      description: Ad Creative object ID.
+      example: '120000000000301'
+    AudienceId:
+      type: string
+      description: Audience (Custom/Saved/Lookalike) object ID.
+      example: '238000000000401'
+    PixelId:
+      type: string
+      description: Pixel ID.
+      example: '123456789012345'
+    CatalogId:
+      type: string
+      description: Commerce Catalog ID.
+      example: '123456789012345'
+    BusinessId:
+      type: string
+      description: Business Manager ID.
+      example: '123456789012345'
+    PageId:
+      type: string
+      description: Page ID.
+      example: '112233445566778'
+    FormId:
+      type: string
+      description: Leadgen form ID.
+      example: '987654321098765'
+    ProductItemId:
+      type: string
+      description: Product item ID within Catalog.
+      example: SKU-ABC-123
+    OfflineEventSetId:
+      type: string
+      description: Offline event set ID.
+      example: '123456789000001'
+    ErrorObject:
+      type: object
+      properties:
+        message:
+          type: string
+        type:
+          type: string
+        code:
+          type: integer
+        error_subcode:
+          type: integer
+          nullable: true
+        error_user_title:
+          type: string
+          nullable: true
+        error_user_msg:
+          type: string
+          nullable: true
+        fbtrace_id:
+          type: string
+      required:
+        - message
+        - type
+        - code
+        - fbtrace_id
+      example:
+        message: '(#100) Invalid parameter'
+        type: OAuthException
+        code: 100
+        error_subcode: 33
+        error_user_title: Invalid Field
+        error_user_msg: Check the requested field names.
+        fbtrace_id: ABCD1Ef2Gh3
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorObject'
+      required:
+        - error
+    CursorCursors:
+      type: object
+      properties:
+        before:
+          type: string
+        after:
+          type: string
+      required: []
+      example:
+        before: QVFIUmF3...
+        after: QVFIUkhV...
+    CursorPaging:
+      type: object
+      description: Cursor-based pagination wrapper returned by Graph API.
+      properties:
+        data:
+          type: array
+          items: {}
+          description: Array of node objects (type varies by endpoint).
+        paging:
+          type: object
+          properties:
+            cursors:
+              $ref: '#/components/schemas/CursorCursors'
+            previous:
+              type: string
+              nullable: true
+            next:
+              type: string
+              nullable: true
+      example:
+        data: []
+        paging:
+          cursors:
+            before: QVFIUmF3...
+            after: QVFIUkhV...
+          previous: 'https://graph.facebook.com/v23.0/...'
+          next: 'https://graph.facebook.com/v23.0/...'
+    DeliveryStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - PAUSED
+        - ARCHIVED
+        - DELETED
+        - IN_PROCESS
+        - WITH_ISSUES
+    Objective:
+      type: string
+      description: Campaign objective.
+      enum:
+        - OUTCOME_AWARENESS
+        - OUTCOME_TRAFFIC
+        - OUTCOME_ENGAGEMENT
+        - OUTCOME_LEADS
+        - OUTCOME_APP_PROMOTION
+        - OUTCOME_SALES
+        - BRAND_AWARENESS
+        - REACH
+        - LEAD_GENERATION
+        - CONVERSIONS
+        - APP_INSTALLS
+        - CATALOG_SALES
+        - MESSAGES
+        - VIDEO_VIEWS
+    BillingEvent:
+      type: string
+      enum:
+        - IMPRESSIONS
+        - CLICK
+        - LINK_CLICKS
+        - APP_INSTALLS
+        - THRUPLAY
+        - REACH
+        - POST_ENGAGEMENT
+    OptimizationGoal:
+      type: string
+      enum:
+        - NONE
+        - REACH
+        - IMPRESSIONS
+        - LINK_CLICKS
+        - LEAD_GENERATION
+        - OFFSITE_CONVERSIONS
+        - LANDING_PAGE_VIEWS
+        - THRUPLAY
+        - QUALITY_LEAD
+        - VALUE
+        - APP_INSTALLS
+    AttributionSetting:
+      type: string
+      description: Attribution window setting for delivery/measurement.
+      enum:
+        - 1d_click
+        - 7d_click
+        - 1d_view
+        - 7d_click,1d_view
+        - 1d_click,1d_view
+    GeoLocationRegion:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Region key, typically numeric string.
+      required:
+        - key
+      example:
+        key: '3846'
+    GeoLocationCity:
+      type: object
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        country:
+          type: string
+        region:
+          type: string
+        radius:
+          type: string
+          description: Radius like "10"
+        distance_unit:
+          type: string
+          enum:
+            - mile
+            - km
+      required:
+        - key
+      example:
+        key: '2420605'
+        name: Austin
+        country: US
+        region: Texas
+        radius: '10'
+        distance_unit: mile
+    GeoLocations:
+      type: object
+      properties:
+        countries:
+          type: array
+          items:
+            type: string
+          example:
+            - US
+            - CA
+        regions:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeoLocationRegion'
+        cities:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeoLocationCity'
+        zips:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+            required:
+              - key
+        location_types:
+          type: array
+          items:
+            type: string
+            enum:
+              - home
+              - recent
+              - travel_in
+              - living_in
+      example:
+        countries:
+          - US
+        location_types:
+          - home
+    TargetingInterest:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+      example:
+        id: '6003139266461'
+        name: Digital marketing
+    TargetingBehavior:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+      example:
+        id: '6071631541183'
+        name: Engaged Shoppers
+    Targeting:
+      type: object
+      description: Ad set targeting spec.
+      properties:
+        age_min:
+          type: integer
+          minimum: 13
+          example: 25
+        age_max:
+          type: integer
+          maximum: 65
+          example: 55
+        genders:
+          type: array
+          items:
+            type: integer
+            enum:
+              - 0
+              - 1
+              - 2
+          description: 0=All, 1=Male, 2=Female
+        geo_locations:
+          $ref: '#/components/schemas/GeoLocations'
+        excluded_geo_locations:
+          $ref: '#/components/schemas/GeoLocations'
+        interests:
+          type: array
+          items:
+            $ref: '#/components/schemas/TargetingInterest'
+        behaviors:
+          type: array
+          items:
+            $ref: '#/components/schemas/TargetingBehavior'
+        flexible_spec:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          description: OR groupings of interests/behaviors/demographics.
+        exclusions:
+          type: object
+          additionalProperties: true
+        publisher_platforms:
+          type: array
+          items:
+            type: string
+            enum:
+              - facebook
+              - instagram
+              - audience_network
+              - messenger
+        facebook_positions:
+          type: array
+          items:
+            type: string
+            enum:
+              - feed
+              - video_feeds
+              - right_hand_column
+              - search
+        instagram_positions:
+          type: array
+          items:
+            type: string
+            enum:
+              - stream
+              - explore
+              - reels
+        device_platforms:
+          type: array
+          items:
+            type: string
+            enum:
+              - mobile
+              - desktop
+        locales:
+          type: array
+          items:
+            type: integer
+      required:
+        - geo_locations
+      example:
+        age_min: 25
+        age_max: 55
+        genders:
+          - 0
+        geo_locations:
+          countries:
+            - US
+          location_types:
+            - home
+        interests:
+          - id: '6003139266461'
+            name: Digital marketing
+        publisher_platforms:
+          - facebook
+          - instagram
+        device_platforms:
+          - mobile
+          - desktop
+    Budget:
+      type: object
+      properties:
+        daily_budget:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Daily budget in the smallest currency unit (e.g., cents).
+          example: '5000'
+        lifetime_budget:
+          type: string
+          pattern: '^[0-9]+$'
+          description: >-
+            Lifetime budget in the smallest currency unit (mutually exclusive
+            with daily_budget).
+          example: '100000'
+      example:
+        daily_budget: '5000'
+    Bid:
+      type: object
+      properties:
+        bid_amount:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Bid cap or amount in smallest currency unit when applicable.
+          example: '200'
+        bid_strategy:
+          type: string
+          enum:
+            - LOWEST_COST_WITHOUT_CAP
+            - LOWEST_COST_WITH_BID_CAP
+            - COST_CAP
+            - TARGET_COST
+      example:
+        bid_strategy: LOWEST_COST_WITHOUT_CAP
+    Schedule:
+      type: object
+      properties:
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        time_based_ad_rotation_id_blocks:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        time_start:
+          type: string
+          format: date-time
+        time_stop:
+          type: string
+          format: date-time
+      example:
+        start_time: '2025-08-10T00:00:00Z'
+        end_time: '2025-09-10T00:00:00Z'
+    AdInsight:
+      type: object
+      properties:
+        date_start:
+          type: string
+          format: date
+        date_stop:
+          type: string
+          format: date
+        account_id:
+          type: string
+        campaign_id:
+          type: string
+        adset_id:
+          type: string
+        ad_id:
+          type: string
+        impressions:
+          type: string
+        clicks:
+          type: string
+        spend:
+          type: string
+        cpc:
+          type: string
+        cpm:
+          type: string
+        ctr:
+          type: string
+        actions:
+          type: array
+          items:
+            type: object
+            properties:
+              action_type:
+                type: string
+              value:
+                type: string
+      example:
+        date_start: '2025-08-01'
+        date_stop: '2025-08-07'
+        account_id: '123456789012345'
+        campaign_id: '120000000000001'
+        impressions: '102394'
+        clicks: '2134'
+        spend: '456.78'
+        cpc: '0.21'
+        cpm: '4.46'
+        ctr: '2.08'
+        actions:
+          - action_type: link_click
+            value: '2134'
+    AdAccount:
+      type: object
+      description: Ad Account node.
+      properties:
+        id:
+          $ref: '#/components/schemas/AdAccountId'
+        account_id:
+          type: string
+          description: Numeric account id without act_ prefix.
+          example: '123456789012345'
+        name:
+          type: string
+        currency:
+          type: string
+          example: USD
+        timezone_id:
+          type: integer
+          example: 1
+        timezone_name:
+          type: string
+          example: America/Los_Angeles
+        business:
+          type: object
+          properties:
+            id:
+              $ref: '#/components/schemas/BusinessId'
+            name:
+              type: string
+        owner:
+          type: string
+          description: User ID of the account owner.
+          example: '100012345678901'
+        amount_spent:
+          type: string
+          description: Total spent in account currency.
+          example: '12345.67'
+        balance:
+          type: string
+          description: Outstanding balance.
+          example: '0'
+        funding_source_details:
+          type: object
+          additionalProperties: true
+        adtrust_dsl:
+          type: integer
+          description: Credit line remaining in minor units.
+        capabilities:
+          type: array
+          items:
+            type: string
+        created_time:
+          type: string
+          format: date-time
+        updated_time:
+          type: string
+          format: date-time
+        effective_status:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeliveryStatus'
+      example:
+        id: act_123456789012345
+        account_id: '123456789012345'
+        name: Primary Ad Account
+        currency: USD
+        timezone_id: 1
+        timezone_name: America/Los_Angeles
+        business:
+          id: '123456789012345'
+          name: Example Business
+        owner: '100012345678901'
+        amount_spent: '12345.67'
+        balance: '0'
+        capabilities:
+          - A2C_COMMERCE
+        created_time: '2024-01-05T12:00:00Z'
+        updated_time: '2025-07-01T12:00:00Z'
+        effective_status:
+          - ACTIVE
+    Campaign:
+      type: object
+      description: Campaign node.
+      properties:
+        id:
+          $ref: '#/components/schemas/CampaignId'
+        account_id:
+          type: string
+          example: '123456789012345'
+        name:
+          type: string
+        objective:
+          $ref: '#/components/schemas/Objective'
+        status:
+          $ref: '#/components/schemas/DeliveryStatus'
+        effective_status:
+          $ref: '#/components/schemas/DeliveryStatus'
+        buying_type:
+          type: string
+          example: AUCTION
+        special_ad_categories:
+          type: array
+          items:
+            type: string
+            enum:
+              - NONE
+              - EMPLOYMENT
+              - CREDIT
+              - HOUSING
+              - SOCIAL_ISSUES_ELECTIONS_POLITICS
+        daily_budget:
+          type: string
+          description: Minor units (e.g., cents).
+          example: '5000'
+        lifetime_budget:
+          type: string
+          example: '100000'
+        start_time:
+          type: string
+          format: date-time
+        stop_time:
+          type: string
+          format: date-time
+        bid_strategy:
+          $ref: '#/components/schemas/Bid/properties/bid_strategy'
+        created_time:
+          type: string
+          format: date-time
+        updated_time:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - objective
+      example:
+        id: '120000000000001'
+        account_id: '123456789012345'
+        name: Q3 Awareness
+        objective: OUTCOME_AWARENESS
+        status: PAUSED
+        effective_status: PAUSED
+        buying_type: AUCTION
+        special_ad_categories:
+          - NONE
+        daily_budget: '5000'
+        start_time: '2025-08-10T00:00:00Z'
+        bid_strategy: LOWEST_COST_WITHOUT_CAP
+        created_time: '2025-08-01T10:00:00Z'
+        updated_time: '2025-08-01T10:00:00Z'
+    AdSet:
+      type: object
+      description: Ad Set node.
+      properties:
+        id:
+          $ref: '#/components/schemas/AdSetId'
+        account_id:
+          type: string
+          example: '123456789012345'
+        campaign_id:
+          $ref: '#/components/schemas/CampaignId'
+        name:
+          type: string
+        status:
+          $ref: '#/components/schemas/DeliveryStatus'
+        effective_status:
+          $ref: '#/components/schemas/DeliveryStatus'
+        daily_budget:
+          type: string
+          example: '5000'
+        lifetime_budget:
+          type: string
+          example: '100000'
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        billing_event:
+          $ref: '#/components/schemas/BillingEvent'
+        optimization_goal:
+          $ref: '#/components/schemas/OptimizationGoal'
+        bid_amount:
+          $ref: '#/components/schemas/Bid/properties/bid_amount'
+        bid_strategy:
+          $ref: '#/components/schemas/Bid/properties/bid_strategy'
+        attribution_setting:
+          $ref: '#/components/schemas/AttributionSetting'
+        targeting:
+          $ref: '#/components/schemas/Targeting'
+        pacing_type:
+          type: array
+          items:
+            type: string
+        promoted_object:
+          type: object
+          additionalProperties: true
+        created_time:
+          type: string
+          format: date-time
+        updated_time:
+          type: string
+          format: date-time
+      required:
+        - id
+        - campaign_id
+        - name
+        - optimization_goal
+        - billing_event
+        - targeting
+      example:
+        id: '120000000000101'
+        account_id: '123456789012345'
+        campaign_id: '120000000000001'
+        name: Prospecting — US 25-55
+        status: PAUSED
+        effective_status: PAUSED
+        daily_budget: '5000'
+        start_time: '2025-08-10T00:00:00Z'
+        billing_event: IMPRESSIONS
+        optimization_goal: REACH
+        bid_strategy: LOWEST_COST_WITHOUT_CAP
+        attribution_setting: 7d_click,1d_view
+        targeting:
+          age_min: 25
+          age_max: 55
+          geo_locations:
+            countries:
+              - US
+          publisher_platforms:
+            - facebook
+            - instagram
+          device_platforms:
+            - mobile
+            - desktop
+        pacing_type:
+          - standard
+        created_time: '2025-08-01T10:05:00Z'
+        updated_time: '2025-08-01T10:05:00Z'
+    Ad:
+      type: object
+      description: Ad node.
+      properties:
+        id:
+          $ref: '#/components/schemas/AdId'
+        account_id:
+          type: string
+          example: '123456789012345'
+        adset_id:
+          $ref: '#/components/schemas/AdSetId'
+        campaign_id:
+          $ref: '#/components/schemas/CampaignId'
+        name:
+          type: string
+        status:
+          $ref: '#/components/schemas/DeliveryStatus'
+        effective_status:
+          $ref: '#/components/schemas/DeliveryStatus'
+        creative:
+          type: object
+          properties:
+            id:
+              $ref: '#/components/schemas/AdCreativeId'
+          required:
+            - id
+        tracking_specs:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        ad_review_feedback:
+          type: object
+          additionalProperties: true
+        recommendations:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        created_time:
+          type: string
+          format: date-time
+        updated_time:
+          type: string
+          format: date-time
+      required:
+        - id
+        - adset_id
+        - name
+        - creative
+      example:
+        id: '120000000000201'
+        account_id: '123456789012345'
+        adset_id: '120000000000101'
+        campaign_id: '120000000000001'
+        name: Primary — Image A
+        status: PAUSED
+        effective_status: PAUSED
+        creative:
+          id: '120000000000301'
+        created_time: '2025-08-01T10:10:00Z'
+        updated_time: '2025-08-01T10:10:00Z'
+    LinkData:
+      type: object
+      properties:
+        message:
+          type: string
+        link:
+          type: string
+        caption:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        picture:
+          type: string
+        image_hash:
+          type: string
+          description: Hash from ad image upload.
+        call_to_action:
+          type: object
+          properties:
+            type:
+              type: string
+              example: LEARN_MORE
+            value:
+              type: object
+              properties:
+                link:
+                  type: string
+                lead_gen_form_id:
+                  $ref: '#/components/schemas/FormId'
+      example:
+        message: Discover our latest offer
+        link: 'https://www.example.com/sale'
+        name: Summer Sale
+        description: Up to 50% off
+        image_hash: 3c5e1a2b6f9d0e...
+        call_to_action:
+          type: LEARN_MORE
+          value:
+            link: 'https://www.example.com/sale'
+    ObjectStorySpec:
+      type: object
+      properties:
+        page_id:
+          $ref: '#/components/schemas/PageId'
+        instagram_actor_id:
+          type: string
+          description: Connected Instagram actor ID.
+          example: '17841400000000000'
+        link_data:
+          $ref: '#/components/schemas/LinkData'
+        video_data:
+          type: object
+          properties:
+            title:
+              type: string
+            message:
+              type: string
+            video_id:
+              type: string
+            call_to_action:
+              type: object
+              properties:
+                type:
+                  type: string
+                value:
+                  type: object
+                  properties:
+                    link:
+                      type: string
+      example:
+        page_id: '112233445566778'
+        link_data:
+          message: Try it today
+          link: 'https://www.example.com'
+          name: Example Product
+          image_hash: e99a18c428cb38d5f260853678922e03
+    AdCreative:
+      type: object
+      description: Ad Creative node.
+      properties:
+        id:
+          $ref: '#/components/schemas/AdCreativeId'
+        account_id:
+          type: string
+          example: '123456789012345'
+        name:
+          type: string
+        object_story_spec:
+          $ref: '#/components/schemas/ObjectStorySpec'
+        asset_feed_spec:
+          type: object
+          description: Dynamic creative asset feed spec.
+          additionalProperties: true
+        template_url:
+          type: string
+        url_tags:
+          type: string
+        thumbnail_url:
+          type: string
+        status:
+          $ref: '#/components/schemas/DeliveryStatus'
+        created_time:
+          type: string
+          format: date-time
+        updated_time:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+      example:
+        id: '120000000000301'
+        account_id: '123456789012345'
+        name: Link Post — Summer Sale
+        object_story_spec:
+          page_id: '112233445566778'
+          link_data:
+            message: Discover our latest offer
+            link: 'https://www.example.com/sale'
+            name: Summer Sale
+            image_hash: 3c5e1a2b6f9d0e...
+        url_tags: utm_source=facebook&utm_medium=cpc&utm_campaign=summer_sale
+        created_time: '2025-08-01T10:08:00Z'
+        updated_time: '2025-08-01T10:08:00Z'
+    DataSourceType:
+      type: string
+      description: Source of audience data.
+      enum:
+        - FILE_IMPORTED
+        - USER_PROVIDED_ONLY
+        - PARTNER_PROVIDED_ONLY
+        - PARTNER_AND_USER_PROVIDED
+        - PIXEL
+        - MOBILE_APP
+        - EXTERNAL_IDS
+        - MULTI_DATA_SOURCE
+        - WEBSITE
+        - OFFLINE_EVENT_SET
+        - STORE_SALES
+        - CRM
+    CustomerFileSchema:
+      type: string
+      description: Customer file schema fields for hashing & mapping.
+      enum:
+        - EMAIL
+        - PHONE
+        - MADID
+        - FN
+        - LN
+        - GEN
+        - CT
+        - ST
+        - ZIP
+        - COUNTRY
+        - DOBY
+        - DOBM
+        - DOBD
+        - DOBy
+    LookalikeSpec:
+      type: object
+      properties:
+        origin_audience_id:
+          $ref: '#/components/schemas/AudienceId'
+        country:
+          type: string
+          description: ISO 2-letter country for lookalike.
+        ratio:
+          type: number
+          format: float
+          description: Audience size ratio (e.g., 0.01 for 1%).
+        type:
+          type: string
+          enum:
+            - custom_ratio
+            - similarity
+        starting_ratio:
+          type: number
+          nullable: true
+        conversion_type:
+          type: string
+          nullable: true
+      required:
+        - origin_audience_id
+        - country
+        - ratio
+      example:
+        origin_audience_id: '238000000000401'
+        country: US
+        ratio: 0.01
+        type: custom_ratio
+    CustomAudienceStatus:
+      type: string
+      enum:
+        - READY
+        - IN_PROGRESS
+        - FAILED
+    CustomAudienceSubtype:
+      type: string
+      description: Audience subtype.
+      enum:
+        - CUSTOM
+        - LOOKALIKE
+        - WEBSITE
+        - MOBILE_APP
+        - OFFLINE_CONVERSION
+        - PARTNER
+        - VALUE_BASED
+        - VIDEO
+        - PAGE
+        - ENGAGEMENT
+        - LEAD
+        - IG_BUSINESS_PROFILE
+        - APP_ACTIVITY
+    CustomAudience:
+      type: object
+      description: Custom Audience node.
+      properties:
+        id:
+          $ref: '#/components/schemas/AudienceId'
+        account_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        customer_file_source:
+          $ref: '#/components/schemas/DataSourceType'
+        subtype:
+          $ref: '#/components/schemas/CustomAudienceSubtype'
+        approximate_count:
+          type: integer
+          nullable: true
+        is_value_based:
+          type: boolean
+          default: false
+        lookalike_spec:
+          $ref: '#/components/schemas/LookalikeSpec'
+        operation_status:
+          $ref: '#/components/schemas/CustomAudienceStatus'
+        retention_days:
+          type: integer
+          nullable: true
+        permitted_roles:
+          type: array
+          items:
+            type: string
+        sharing_status:
+          type: string
+          nullable: true
+        created_time:
+          type: string
+          format: date-time
+        updated_time:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - subtype
+      example:
+        id: '238000000000401'
+        account_id: '123456789012345'
+        name: CRM — US Customers (Hashed)
+        description: Uploaded SHA-256 hashed emails and phones
+        customer_file_source: FILE_IMPORTED
+        subtype: CUSTOM
+        approximate_count: 154320
+        is_value_based: false
+        operation_status: READY
+        created_time: '2025-08-01T12:00:00Z'
+        updated_time: '2025-08-01T12:00:00Z'
+    SavedAudience:
+      type: object
+      description: Saved Audience (targeting preset) node.
+      properties:
+        id:
+          $ref: '#/components/schemas/AudienceId'
+        account_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        targeting:
+          $ref: '#/components/schemas/Targeting'
+        approximate_count:
+          type: integer
+          nullable: true
+        created_time:
+          type: string
+          format: date-time
+        updated_time:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - targeting
+      example:
+        id: '238000000000450'
+        account_id: '123456789012345'
+        name: Prospecting — US 25-55, IG+FB
+        targeting:
+          age_min: 25
+          age_max: 55
+          geo_locations:
+            countries:
+              - US
+          publisher_platforms:
+            - facebook
+            - instagram
+          device_platforms:
+            - mobile
+            - desktop
+        approximate_count: 24000000
+        created_time: '2025-08-02T12:00:00Z'
+        updated_time: '2025-08-02T12:00:00Z'
+    Pixel:
+      type: object
+      description: Meta Pixel node.
+      properties:
+        id:
+          $ref: '#/components/schemas/PixelId'
+        name:
+          type: string
+        owner_ad_account:
+          type: string
+          example: act_123456789012345
+        last_fired_time:
+          type: string
+          format: date-time
+          nullable: true
+        code:
+          type: string
+          description: Pixel base code snippet (read-only).
+          nullable: true
+        enable_automatic_matching:
+          type: boolean
+        automatic_matching_fields:
+          type: array
+          items:
+            type: string
+        data_use_setting:
+          type: string
+          nullable: true
+        created_time:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+      example:
+        id: '123456789012345'
+        name: Main Site Pixel
+        owner_ad_account: act_123456789012345
+        enable_automatic_matching: true
+        automatic_matching_fields:
+          - em
+          - ph
+          - fn
+          - ln
+          - ct
+          - st
+          - zp
+          - country
+        created_time: '2024-05-10T10:00:00Z'
+    UserData:
+      type: object
+      description: >-
+        User data for CAPI, use normalized lowercased strings; hash PII with
+        SHA-256 unless using Advanced Matching with Automatic Extended Data.
+      properties:
+        em:
+          type: string
+          description: Email (hashed)
+        ph:
+          type: string
+          description: Phone (hashed)
+        fn:
+          type: string
+          description: First name (hashed)
+        ln:
+          type: string
+          description: Last name (hashed)
+        ct:
+          type: string
+          description: City (hashed)
+        st:
+          type: string
+          description: State (hashed)
+        zp:
+          type: string
+          description: Zip (hashed)
+        country:
+          type: string
+          description: Country (hashed)
+        external_id:
+          type: string
+          description: External user id (hashed recommended)
+        fbc:
+          type: string
+          description: FB click id cookie value
+        fbp:
+          type: string
+          description: FB browser id cookie value
+        client_ip_address:
+          type: string
+        client_user_agent:
+          type: string
+      example:
+        em: 5d41402abc4b2a76b9719d911017c592
+        ph: 1f3870be274f6c49b3e31a0c6728957f
+        fn: 098f6bcd4621d373cade4e832627b4f6
+        ln: 098f6bcd4621d373cade4e832627b4f6
+        fbc: fb.1.1581555351854.AbCdEfGhIjKlMnOpQrStUvWxYz
+        fbp: fb.1.1554763741205.1098115397
+        client_ip_address: 203.0.113.42
+        client_user_agent: Mozilla/5.0 ...
+    CustomData:
+      type: object
+      description: Event-specific custom data for CAPI.
+      properties:
+        currency:
+          type: string
+          example: USD
+        value:
+          type: number
+          format: float
+          example: 123.45
+        content_name:
+          type: string
+        content_category:
+          type: string
+        content_ids:
+          type: array
+          items:
+            type: string
+        contents:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              quantity:
+                type: number
+              item_price:
+                type: number
+        order_id:
+          type: string
+        status:
+          type: string
+        num_items:
+          type: integer
+        search_string:
+          type: string
+      example:
+        currency: USD
+        value: 59.99
+        content_ids:
+          - SKU-ABC-123
+        contents:
+          - id: SKU-ABC-123
+            quantity: 1
+            item_price: 59.99
+    EventName:
+      type: string
+      enum:
+        - ViewContent
+        - Search
+        - AddToCart
+        - AddToWishlist
+        - InitiateCheckout
+        - AddPaymentInfo
+        - Purchase
+        - Lead
+        - CompleteRegistration
+        - Contact
+        - Subscribe
+        - CustomizeProduct
+        - Donate
+        - FindLocation
+        - Schedule
+        - StartTrial
+        - SubmitApplication
+        - SubmitInterest
+    ConversionEvent:
+      type: object
+      description: Server-side Conversion (CAPI) event.
+      properties:
+        event_name:
+          $ref: '#/components/schemas/EventName'
+        event_time:
+          type: integer
+          description: Unix timestamp (seconds).
+          example: 1723111111
+        event_source_url:
+          type: string
+          nullable: true
+        event_id:
+          type: string
+          nullable: true
+        action_source:
+          type: string
+          enum:
+            - email
+            - website
+            - phone_call
+            - chat
+            - physical_store
+            - system_generated
+            - app
+            - other
+        user_data:
+          $ref: '#/components/schemas/UserData'
+        custom_data:
+          $ref: '#/components/schemas/CustomData'
+        opt_out:
+          type: boolean
+          default: false
+        data_processing_options:
+          type: array
+          items:
+            type: string
+        data_processing_options_country:
+          type: integer
+          nullable: true
+        data_processing_options_state:
+          type: integer
+          nullable: true
+      required:
+        - event_name
+        - event_time
+        - action_source
+        - user_data
+      example:
+        event_name: Purchase
+        event_time: 1723111111
+        action_source: website
+        event_source_url: 'https://www.example.com/thank-you'
+        event_id: ORDER-12345
+        user_data:
+          em: 5d41402abc4b2a76b9719d911017c592
+          fbp: fb.1.1554763741205.1098115397
+          fbc: fb.1.1581555351854.AbCdEfGhIjKlMnOpQrStUvWxYz
+          client_ip_address: 203.0.113.42
+          client_user_agent: Mozilla/5.0 ...
+        custom_data:
+          currency: USD
+          value: 59.99
+          content_ids:
+            - SKU-ABC-123
+          contents:
+            - id: SKU-ABC-123
+              quantity: 1
+              item_price: 59.99
+    ConversionsEventRequest:
+      type: object
+      description: Envelope for sending CAPI events to a Pixel.
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversionEvent'
+        test_event_code:
+          type: string
+          nullable: true
+        namespace_id:
+          type: string
+          nullable: true
+        upload_tag:
+          type: string
+          nullable: true
+        partner_agent:
+          type: string
+          nullable: true
+      required:
+        - data
+      example:
+        data:
+          - event_name: Purchase
+            event_time: 1723111111
+            action_source: website
+            user_data:
+              em: 5d41402abc4b2a76b9719d911017c592
+              fbp: fb.1.1554763741205.1098115397
+            custom_data:
+              currency: USD
+              value: 59.99
+        test_event_code: TEST123
+    ConversionsEventResponse:
+      type: object
+      properties:
+        events_received:
+          type: integer
+        fbtrace_id:
+          type: string
+        messages:
+          type: array
+          items:
+            type: string
+      example:
+        events_received: 1
+        fbtrace_id: A1B2c3D4E5
+        messages:
+          - Event processed
+    CustomConversion:
+      type: object
+      description: >-
+        Custom Conversion node for aggregating events into reporting actions.
+      properties:
+        id:
+          type: string
+        account_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        custom_event_type:
+          type: string
+          enum:
+            - ADD_TO_CART
+            - ADD_TO_WISHLIST
+            - COMPLETE_REGISTRATION
+            - CONTENT_VIEW
+            - INITIATED_CHECKOUT
+            - LEAD
+            - PURCHASE
+            - SEARCH
+            - CONTACT
+            - CUSTOM
+        rule:
+          type: string
+          description: JSON rule string describing URL or parameter matching.
+        event_source_type:
+          type: string
+          enum:
+            - PIXEL
+            - APP
+            - OFFLINE_CONVERSION_DATASET
+        pixel_id:
+          $ref: '#/components/schemas/PixelId'
+        default_conversion_value:
+          type: number
+          format: float
+          nullable: true
+        creation_time:
+          type: string
+          format: date-time
+        last_fired_time:
+          type: string
+          format: date-time
+          nullable: true
+        is_archived:
+          type: boolean
+      required:
+        - id
+        - name
+        - custom_event_type
+        - event_source_type
+      example:
+        id: '123456789998765'
+        account_id: '123456789012345'
+        name: Purchase — /thank-you
+        custom_event_type: PURCHASE
+        event_source_type: PIXEL
+        pixel_id: '123456789012345'
+        rule: '{"url":{"i_contains":"thank-you"}}'
+        default_conversion_value: 0
+        creation_time: '2025-08-01T09:00:00Z'
+        is_archived: false
+    Catalog:
+      type: object
+      description: Commerce Catalog node.
+      properties:
+        id:
+          $ref: '#/components/schemas/CatalogId'
+        name:
+          type: string
+        vertical:
+          type: string
+          enum:
+            - commerce
+            - hotels
+            - flights
+            - destinations
+            - home_listings
+            - vehicles
+        product_count:
+          type: integer
+        business:
+          type: object
+          properties:
+            id:
+              $ref: '#/components/schemas/BusinessId'
+            name:
+              type: string
+        created_time:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+      example:
+        id: '123456789012345'
+        name: Main Product Catalog
+        vertical: commerce
+        product_count: 250
+        business:
+          id: '123456789012345'
+          name: Example Business
+        created_time: '2025-07-15T10:00:00Z'
+    ProductItem:
+      type: object
+      description: Product item node within a Catalog.
+      properties:
+        id:
+          $ref: '#/components/schemas/ProductItemId'
+        retailer_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: string
+        currency:
+          type: string
+        availability:
+          type: string
+          enum:
+            - in stock
+            - out of stock
+            - preorder
+            - available for order
+        image_url:
+          type: string
+        url:
+          type: string
+        brand:
+          type: string
+        category:
+          type: string
+        condition:
+          type: string
+        product_type:
+          type: string
+        additional_image_urls:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - name
+        - price
+        - currency
+      example:
+        id: SKU-ABC-123
+        retailer_id: SKU-ABC-123
+        name: Example Product
+        description: An example item.
+        price: '59.99'
+        currency: USD
+        availability: in stock
+        image_url: 'https://www.example.com/images/product.jpg'
+        url: 'https://www.example.com/product'
+        brand: Example Brand
+        category: Example Category
+        condition: new
+    Feed:
+      type: object
+      description: Product feed node for a Catalog.
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        file_name:
+          type: string
+        format:
+          type: string
+          enum:
+            - TSV
+            - CSV
+            - XML
+        country:
+          type: string
+        encoding:
+          type: string
+        delimiter:
+          type: string
+        quoted_fields_mode:
+          type: string
+        schedule:
+          type: object
+          properties:
+            interval:
+              type: string
+            url:
+              type: string
+        last_upload:
+          type: object
+          additionalProperties: true
+      example:
+        id: '987654321098765'
+        name: Daily Feed
+        file_name: products.csv
+        format: CSV
+        country: US
+        encoding: UTF-8
+        delimiter: ','
+        quoted_fields_mode: always
+        schedule:
+          interval: DAILY
+          url: 'https://www.example.com/products.csv'
+    UploadSession:
+      type: object
+      description: Upload session node for product feeds or videos.
+      properties:
+        id:
+          type: string
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        upload_status:
+          type: string
+          enum:
+            - pending
+            - in_progress
+            - completed
+            - failed
+        error_count:
+          type: integer
+        error_messages:
+          type: array
+          items:
+            type: string
+        handle:
+          type: string
+      example:
+        id: up_123456789012345
+        start_time: '2025-08-01T10:00:00Z'
+        upload_status: in_progress
+        error_count: 0
+    OfflineEventSet:
+      type: object
+      description: Offline Event Set node.
+      properties:
+        id:
+          $ref: '#/components/schemas/OfflineEventSetId'
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        business:
+          type: object
+          properties:
+            id:
+              $ref: '#/components/schemas/BusinessId'
+            name:
+              type: string
+        data_origin:
+          type: string
+          enum:
+            - directly_from_people
+            - partner_provided
+            - mixed
+        is_mta_use:
+          type: boolean
+        creation_time:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+      example:
+        id: '123456789000001'
+        name: In-store Purchases
+        description: Offline purchases from POS data
+        business:
+          id: '123456789012345'
+          name: Example Business
+        data_origin: directly_from_people
+        is_mta_use: false
+        creation_time: '2024-05-01T10:00:00Z'
+    Lead:
+      type: object
+      description: Lead retrieved from a Leadgen form.
+      properties:
+        id:
+          type: string
+        created_time:
+          type: string
+          format: date-time
+        field_data:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              values:
+                type: array
+                items:
+                  type: string
+        ad_id:
+          type: string
+          nullable: true
+        form_id:
+          $ref: '#/components/schemas/FormId'
+        is_organic:
+          type: boolean
+      example:
+        id: '123456789876543'
+        created_time: '2025-08-01T10:00:00Z'
+        field_data:
+          - name: full_name
+            values:
+              - John Doe
+          - name: email
+            values:
+              - john@example.com
+        ad_id: '120000000000201'
+        form_id: '987654321098765'
+        is_organic: true
+    AsyncJobStatus:
+      type: object
+      description: Status object for async jobs (e.g., insights report).
+      properties:
+        id:
+          type: string
+        async_status:
+          type: string
+          enum:
+            - Job Not Started
+            - Job Started
+            - Job Completed
+            - Job Failed
+        async_percent_completion:
+          type: integer
+          minimum: 0
+          maximum: 100
+        async_error_code:
+          type: integer
+          nullable: true
+        async_error_message:
+          type: string
+          nullable: true
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+      example:
+        id: insights_job_123
+        async_status: Job Completed
+        async_percent_completion: 100
+        start_time: '2025-08-01T10:00:00Z'
+        end_time: '2025-08-01T10:05:00Z'
+    BatchRequest:
+      type: object
+      description: Graph API Batch request item.
+      properties:
+        method:
+          type: string
+          example: POST
+        relative_url:
+          type: string
+          example: act_123456789012345/campaigns
+        body:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        omit_response_on_success:
+          type: boolean
+          default: false
+      required:
+        - method
+        - relative_url
+    BatchResponse:
+      type: object
+      description: Graph API Batch response item.
+      properties:
+        code:
+          type: integer
+        headers:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              value:
+                type: string
+        body:
+          type: string
+      example:
+        code: 200
+        headers:
+          - name: Content-Type
+            value: application/json
+        body: '{"id":"120000000000001","success":true}'
+    UserProfile:
+      type: object
+      description: A user profile object.
+      additionalProperties: true
+      example:
+        id: '100012345678901'
+        name: John Doe
+    BusinessObject:
+      type: object
+      description: A business object.
+      additionalProperties: true
+    PageObject:
+      type: object
+      description: A Facebook Page object.
+      additionalProperties: true
+    LeadgenForm:
+      type: object
+      description: A lead generation form object.
+      additionalProperties: true
+  examples:
+    CreateCampaignExample:
+      summary: Create a campaign
+      value:
+        name: Spring Promo Campaign
+        objective: LINK_CLICKS
+        status: PAUSED
+    CreateAdSetExample:
+      summary: Create an ad set with targeting and budget
+      value:
+        name: Ad Set 1
+        daily_budget: '5000'
+        start_time: '2025-09-01T00:00:00-0700'
+        end_time: '2025-09-30T23:59:59-0700'
+        campaign_id: '2384759834759836'
+        targeting:
+          geo_locations:
+            countries:
+              - US
+          age_min: 25
+          age_max: 55
+    CreateAdCreativeExample:
+      summary: Create an ad creative
+      value:
+        name: Creative 1
+        object_story_spec:
+          page_id: '1234567890'
+          link_data:
+            message: Check out our offer!
+            link: 'https://example.com'
+            image_hash: abcdef1234567890
+    CreateAdExample:
+      summary: Create an ad
+      value:
+        name: Ad 1
+        adset_id: '2384759834759835'
+        creative:
+          creative_id: '987654321001234'
+        status: PAUSED
+    InsightsExample:
+      summary: Fetch insights with breakdowns
+      value:
+        level: campaign
+        fields: impressions,clicks,spend
+        time_range:
+          since: '2025-08-01'
+          until: '2025-08-31'
+        breakdowns: age,gender
+    PixelEventExample:
+      summary: Push CAPI event
+      value:
+        data:
+          - event_name: Purchase
+            event_time: 1723112200
+            user_data:
+              em:
+                - c8f2454e5a8a0e1a5b3b0c8e3f5f5a2e1c3d3f4e2c4a4f2e3a1d1e1a1b2c3d4
+            custom_data:
+              currency: USD
+              value: 123.45
+    CustomAudienceExample:
+      summary: Create custom audience from customer file
+      value:
+        name: Customer List
+        subtype: CUSTOM
+        customer_file_source: USER_PROVIDED_ONLY
+    ProductFeedUploadExample:
+      summary: Create product feed upload session
+      value:
+        file_name: products.csv
+    OfflineEventsExample:
+      summary: Submit offline events batch
+      value:
+        data:
+          - match_keys:
+              email:
+                - c8f2454e5a8a0e1a5b3b0c8e3f5f5a2e1c3d3f4e2c4a4f2e3a1d1e1a1b2c3d4
+            event_name: Purchase
+            event_time: 1723112200
+            value: 59.99
+            currency: USD
+    RetrieveLeadsExample:
+      summary: Retrieve leads from a form
+      value:
+        limit: 25
+        start_time: 1722500000
+        end_time: 1723112200
+    BatchCreateExample:
+      summary: Use batch to create multiple objects
+      value:
+        batch: >-
+          [{"method":"POST","relative_url":"act_1234567890/campaigns","body":"name=Test+Campaign&objective=LINK_CLICKS&status=PAUSED"},{"method":"POST","relative_url":"act_1234567890/adsets","body":"name=Test+Adset&campaign_id=2384759834759836"}]
+  responses:
+    SuccessResponse:
+      description: Successful operation
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+            example: true
+    UnauthorizedError:
+      description: Authentication information is missing or invalid.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+    CreatedResponse:
+      description: Resource created successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id:
+                type: string
+            example: '2384759834759836'
+  requestBodies:
+    CreateCampaign:
+      description: Create a new campaign
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Campaign'
+          examples:
+            create:
+              $ref: '#/components/examples/CreateCampaignExample'
+    CreateAdSet:
+      description: Create a new ad set
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AdSet'
+          examples:
+            create:
+              $ref: '#/components/examples/CreateAdSetExample'
+    CreateAdCreative:
+      description: Create a new ad creative
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AdCreative'
+          examples:
+            create:
+              $ref: '#/components/examples/CreateAdCreativeExample'
+    CreateAd:
+      description: Create a new ad
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Ad'
+          examples:
+            create:
+              $ref: '#/components/examples/CreateAdExample'
+    PushPixelEvent:
+      description: Push a Conversions API event
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ConversionEvent'
+          examples:
+            push:
+              $ref: '#/components/examples/PixelEventExample'
+    CreateCustomAudience:
+      description: Create a new custom audience
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CustomAudience'
+          examples:
+            create:
+              $ref: '#/components/examples/CustomAudienceExample'
+    CreateProductFeedUpload:
+      description: Create a product feed upload session
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UploadSession'
+          examples:
+            create:
+              $ref: '#/components/examples/ProductFeedUploadExample'
+    SubmitOfflineEvents:
+      description: Submit offline events batch
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConversionEvent'
+          examples:
+            submit:
+              $ref: '#/components/examples/OfflineEventsExample'
+    RetrieveLeads:
+      description: Retrieve leads from a form
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              limit:
+                type: integer
+              start_time:
+                type: integer
+              end_time:
+                type: integer
+          examples:
+            retrieve:
+              $ref: '#/components/examples/RetrieveLeadsExample'
