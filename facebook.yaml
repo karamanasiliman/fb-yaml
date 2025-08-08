@@ -64,8 +64,6 @@ info:
 servers:
   - url: https://graph.facebook.com/v23.0
     description: Production server pinned to version v23.0.
-  - url: https://graph.facebook.com
-    description: Versionless server (include version in path, e.g., /v23.0/...).
 externalDocs:
   description: Meta Marketing API Documentation
   url: https://developers.facebook.com/docs/marketing-apis/
@@ -186,6 +184,34 @@ paths:
                 name: John Doe
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+  '/{user_id}':
+    get:
+      tags:
+        - Accounts
+      summary: Get user profile by ID
+      description: >-
+        Returns the profile for a specified user ID (requires appropriate
+        permissions).
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: '100012345678901'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: Successful response with user profile data.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
   /me/adaccounts:
     get:
       tags:
@@ -215,6 +241,51 @@ paths:
                   cursors:
                     before: QVFIUmF3...
                     after: QVFIUkhV...
+  '/{ad_account_id}':
+    get:
+      tags:
+        - Accounts
+      summary: Get ad account
+      description: Returns the details for a given ad account.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_account_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdAccountId'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: Ad account object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdAccount'
+  '/{business_id}':
+    get:
+      tags:
+        - Accounts
+      summary: Get business
+      description: Returns details for a specified business.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: business_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/BusinessId'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: Business object
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
   '/{business_id}/owned_ad_accounts':
     get:
       tags:
@@ -303,6 +374,29 @@ paths:
                     type: string
               example:
                 id: '543210987654321'
+  '/{page_id}':
+    get:
+      tags:
+        - Accounts
+      summary: Get page
+      description: Returns details for a specified Facebook Page.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: page_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/PageId'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: Page object
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
   '/{page_id}/leadgen_forms':
     get:
       tags:
@@ -466,6 +560,96 @@ paths:
                     type: string
               example:
                 id: '120000000000001'
+  '/{campaign_id}':
+    get:
+      tags:
+        - Campaigns
+      summary: Get campaign
+      description: Returns details for the specified campaign.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: campaign_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/CampaignId'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: Campaign object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+    post:
+      tags:
+        - Campaigns
+      summary: Update campaign
+      description: Updates fields on a campaign.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: campaign_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/CampaignId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                status:
+                  $ref: '#/components/schemas/DeliveryStatus'
+                daily_budget:
+                  type: string
+                lifetime_budget:
+                  type: string
+                stop_time:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Success indicator
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+              example:
+                success: true
+    delete:
+      tags:
+        - Campaigns
+      summary: Delete campaign
+      description: Deletes the specified campaign (status changes to DELETED).
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: campaign_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/CampaignId'
+      responses:
+        '200':
+          description: Success indicator
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+              example:
+                success: true
   '/{campaign_id}/insights':
     get:
       tags:
@@ -611,6 +795,98 @@ paths:
                     type: string
               example:
                 id: '120000000000101'
+  '/{adset_id}':
+    get:
+      tags:
+        - Ad Sets
+      summary: Get ad set
+      description: Returns details for the specified ad set.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: adset_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdSetId'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: Ad set object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdSet'
+    post:
+      tags:
+        - Ad Sets
+      summary: Update ad set
+      description: Updates fields on an ad set.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: adset_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdSetId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                status:
+                  $ref: '#/components/schemas/DeliveryStatus'
+                daily_budget:
+                  type: string
+                lifetime_budget:
+                  type: string
+                end_time:
+                  type: string
+                  format: date-time
+                targeting:
+                  $ref: '#/components/schemas/Targeting'
+      responses:
+        '200':
+          description: Success indicator
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+              example:
+                success: true
+    delete:
+      tags:
+        - Ad Sets
+      summary: Delete ad set
+      description: Deletes the specified ad set (status changes to DELETED).
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: adset_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdSetId'
+      responses:
+        '200':
+          description: Success indicator
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+              example:
+                success: true
   '/{adset_id}/insights':
     get:
       tags:
@@ -726,6 +1002,89 @@ paths:
                     type: string
               example:
                 id: '120000000000201'
+  '/{ad_id}':
+    get:
+      tags:
+        - Ads
+      summary: Get ad
+      description: Returns details for the specified ad.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdId'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: Ad object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ad'
+    post:
+      tags:
+        - Ads
+      summary: Update ad
+      description: Updates fields on an ad.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                status:
+                  $ref: '#/components/schemas/DeliveryStatus'
+      responses:
+        '200':
+          description: Success indicator
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+              example:
+                success: true
+    delete:
+      tags:
+        - Ads
+      summary: Delete ad
+      description: Deletes the specified ad (status changes to DELETED).
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: ad_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdId'
+      responses:
+        '200':
+          description: Success indicator
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+              example:
+                success: true
   '/{ad_id}/insights':
     get:
       tags:
@@ -837,6 +1196,64 @@ paths:
                     type: string
               example:
                 id: '120000000000301'
+  '/{adcreative_id}':
+    get:
+      tags:
+        - Creatives
+      summary: Get ad creative
+      description: Returns details for the specified ad creative.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: adcreative_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdCreativeId'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: Ad creative object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdCreative'
+    post:
+      tags:
+        - Creatives
+      summary: Update ad creative
+      description: Updates fields on an ad creative.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: adcreative_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdCreativeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                object_story_spec:
+                  $ref: '#/components/schemas/ObjectStorySpec'
+      responses:
+        '200':
+          description: Success indicator
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+              example:
+                success: true
   '/{ad_account_id}/adimages':
     post:
       tags:
@@ -1104,6 +1521,89 @@ paths:
                     type: string
               example:
                 id: '238000000000401'
+  '/{custom_audience_id}':
+    get:
+      tags:
+        - Audiences
+      summary: Get custom audience
+      description: Returns details for the specified custom audience.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: custom_audience_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AudienceId'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: Custom audience object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomAudience'
+    post:
+      tags:
+        - Audiences
+      summary: Update custom audience
+      description: Updates fields on a custom audience.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: custom_audience_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AudienceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Success indicator
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+              example:
+                success: true
+    delete:
+      tags:
+        - Audiences
+      summary: Delete custom audience
+      description: Deletes the specified custom audience.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: custom_audience_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AudienceId'
+      responses:
+        '200':
+          description: Success indicator
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+              example:
+                success: true
   '/{ad_account_id}/targetingsuggestions':
     get:
       tags:
@@ -1256,6 +1756,28 @@ paths:
                     type: string
               example:
                 report_run_id: insights_job_123
+  '/{async_job_id}':
+    get:
+      tags:
+        - Insights
+      summary: Get async insights job status
+      description: Returns the status of an asynchronous insights job.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: async_job_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: insights_job_123
+      responses:
+        '200':
+          description: Async job status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsyncJobStatus'
   '/{async_job_id}/results':
     get:
       tags:
@@ -1342,6 +1864,28 @@ paths:
                     type: string
               example:
                 id: '123456789012345'
+  '/{pixel_id}':
+    get:
+      tags:
+        - Pixels
+      summary: Get pixel
+      description: Returns details for the specified pixel.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: pixel_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/PixelId'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: Pixel object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pixel'
   '/{pixel_id}/events':
     post:
       tags:
@@ -1422,6 +1966,29 @@ paths:
                     type: string
               example:
                 id: '987654321234567'
+  '/{custom_conversion_id}':
+    get:
+      tags:
+        - Conversions
+      summary: Get custom conversion
+      description: Returns details for the specified custom conversion.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: custom_conversion_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: '987654321234567'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: Custom conversion object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomConversion'
   '/{business_id}/owned_product_catalogs':
     get:
       tags:
@@ -1444,6 +2011,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CursorPaging'
+  '/{catalog_id}':
+    get:
+      tags:
+        - Catalogs
+      summary: Get catalog
+      description: Returns details for the specified catalog.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: catalog_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/CatalogId'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: Catalog object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Catalog'
   '/{catalog_id}/products':
     get:
       tags:
@@ -1660,6 +2249,28 @@ paths:
                     type: string
               example:
                 id: '123456789000001'
+  '/{dataset_id}':
+    get:
+      tags:
+        - Offline Events
+      summary: Get offline event set
+      description: Returns details for the specified offline event set.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: dataset_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/OfflineEventSetId'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: Offline event set object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfflineEventSet'
   '/{dataset_id}/events':
     post:
       tags:
@@ -1773,6 +2384,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CursorPaging'
+  '/{form_id}':
+    get:
+      tags:
+        - Lead Ads
+      summary: Get leadgen form
+      description: Returns details for the specified leadgen form.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: form_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/FormId'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: Leadgen form object
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
   '/{ad_account_id}/delivery_estimate':
     get:
       tags:
@@ -1802,142 +2436,6 @@ paths:
               schema:
                 type: object
                 additionalProperties: true
-  '/{id}':
-    get:
-      tags:
-        - Accounts
-        - Campaigns
-        - Ad Sets
-        - Ads
-        - Creatives
-        - Audiences
-        - Pixels
-        - Conversions
-        - Catalogs
-        - Offline Events
-        - Lead Ads
-        - Insights
-      summary: Get object by ID
-      description: >-
-        Retrieves a Graph API object by its ID. The returned object will be one
-        of many possible types (e.g., User, Ad Account, Campaign, Page)
-        depending on the ID provided.
-      security:
-        - OAuth2Bearer: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: >-
-            The unique identifier for the Graph API object. This can be a User
-            ID, Ad Account ID, Campaign ID, etc.
-          schema:
-            type: string
-            example: '120000000000001'
-        - $ref: '#/components/parameters/fields'
-      responses:
-        '200':
-          description: >-
-            Successful response with the requested object data. The structure of
-            the response will vary depending on the type of object retrieved.
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/schemas/UserProfile'
-                  - $ref: '#/components/schemas/AdAccount'
-                  - $ref: '#/components/schemas/BusinessObject'
-                  - $ref: '#/components/schemas/PageObject'
-                  - $ref: '#/components/schemas/Campaign'
-                  - $ref: '#/components/schemas/AdSet'
-                  - $ref: '#/components/schemas/Ad'
-                  - $ref: '#/components/schemas/AdCreative'
-                  - $ref: '#/components/schemas/CustomAudience'
-                  - $ref: '#/components/schemas/AsyncJobStatus'
-                  - $ref: '#/components/schemas/Pixel'
-                  - $ref: '#/components/schemas/CustomConversion'
-                  - $ref: '#/components/schemas/Catalog'
-                  - $ref: '#/components/schemas/OfflineEventSet'
-                  - $ref: '#/components/schemas/LeadgenForm'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-    post:
-      tags:
-        - Campaigns
-        - Ad Sets
-        - Ads
-        - Creatives
-        - Audiences
-      summary: Update object by ID
-      description: >-
-        Updates an existing Graph API object by its ID. This operation is only
-        supported for certain object types like Campaigns, Ad Sets, Ads,
-        Creatives, and Custom Audiences. The required request body depends on
-        the object being updated.
-      security:
-        - OAuth2Bearer: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: The ID of the object to update.
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              oneOf:
-                - $ref: '#/components/schemas/Campaign'
-                - $ref: '#/components/schemas/AdSet'
-                - $ref: '#/components/schemas/Ad'
-                - $ref: '#/components/schemas/AdCreative'
-                - $ref: '#/components/schemas/CustomAudience'
-      responses:
-        '200':
-          description: Success indicator
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
-    delete:
-      tags:
-        - Campaigns
-        - Ad Sets
-        - Ads
-        - Audiences
-      summary: Delete object by ID
-      description: >-
-        Deletes a Graph API object by its ID. This operation is only supported
-        for certain object types like Campaigns, Ad Sets, Ads, and Custom
-        Audiences.
-      security:
-        - OAuth2Bearer: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: The ID of the object to delete.
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success indicator
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-              example:
-                success: true
 webhooks:
   leadgen:
     post:
@@ -4006,25 +4504,6 @@ components:
           - name: Content-Type
             value: application/json
         body: '{"id":"120000000000001","success":true}'
-    UserProfile:
-      type: object
-      description: A user profile object.
-      additionalProperties: true
-      example:
-        id: '100012345678901'
-        name: John Doe
-    BusinessObject:
-      type: object
-      description: A business object.
-      additionalProperties: true
-    PageObject:
-      type: object
-      description: A Facebook Page object.
-      additionalProperties: true
-    LeadgenForm:
-      type: object
-      description: A lead generation form object.
-      additionalProperties: true
   examples:
     CreateCampaignExample:
       summary: Create a campaign
